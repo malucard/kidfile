@@ -25,7 +25,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: kidfile-explorer
-        path: ${{ github.workspace }}/target/release/kidfile-explorer
+        path: ${{ github.workspace }}/target/release/
         if-no-files-found: error
   build-windows:
     runs-on: windows-latest
@@ -41,7 +41,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: kidfile-explorer
-        path: ${{ github.workspace }}/target/release/kidfile-explorer.exe
+        path: ${{ github.workspace }}/target/release/
         if-no-files-found: error
   build-macos:
     runs-on: macos-latest
@@ -57,5 +57,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: kidfile-explorer
-        path: ${{ github.workspace }}/target/release/kidfile-explorer
+        path: ${{ github.workspace }}/target/release/
         if-no-files-found: error
