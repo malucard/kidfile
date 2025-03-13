@@ -7,8 +7,6 @@ use super::{Archive, ArchiveEntry};
 // really hoping that doesn't cause false positives
 
 const ALIGNMENT: usize = 2048;
-const ZEROS: usize = 64;
-const AFTER: usize = 512;
 
 pub const ENTRY_CONCAT2K: Decoder<Archive> = Decoder {
 	id: "concat2k",
@@ -16,14 +14,11 @@ pub const ENTRY_CONCAT2K: Decoder<Archive> = Decoder {
 	detect: |file| Certainty::possible_if(file.len() > ALIGNMENT * 2 && !file.starts_with(b"\x7FELF") && !file.starts_with(b"\0\0\x01\xBA") && {
 		let mut boundary = ALIGNMENT;
 		loop {
-			let mut check_buf = [0u8; ZEROS + AFTER];
-			if file.read_chunk_exact(&mut check_buf, boundary - ZEROS).is_err() {
+			let mut check_buf = [0u8; 8];
+			if file.read_chunk_exact(&mut check_buf, boundary).is_err() {
 				break false;
 			}
-			if check_buf[0..ZEROS].iter().all(|x| *x == 0) && check_buf[ZEROS..ZEROS + AFTER].iter().any(|x| *x != 0) {
-				break true;
-			}
-			if check_signature(&check_buf[ZEROS..]) {
+			if check_signature(&check_buf) {
 				break true;
 			}
 			boundary += ALIGNMENT;
@@ -34,8 +29,8 @@ pub const ENTRY_CONCAT2K: Decoder<Archive> = Decoder {
 		let mut boundary = ALIGNMENT;
 		let mut entries = Vec::new();
 		loop {
-			let mut check_buf = [0u8; ZEROS + AFTER];
-			if file.read_chunk_exact(&mut check_buf, boundary - ZEROS).is_err() {
+			let mut check_buf = [0u8; 8];
+			if file.read_chunk_exact(&mut check_buf, boundary).is_err() {
 				entries.push(ArchiveEntry {
 					name: entries.len().to_string(),
 					data: file.subfile(cur_entry_start, file.len() - cur_entry_start).unwrap(),
@@ -47,8 +42,7 @@ pub const ENTRY_CONCAT2K: Decoder<Archive> = Decoder {
 					return Err("could not find multiple entries".into());
 				}
 			}
-			if check_signature(&check_buf[ZEROS..ZEROS + AFTER])
-					|| (check_buf[0..ZEROS].iter().all(|x| *x == 0) && check_buf[ZEROS..ZEROS + AFTER].iter().any(|x| *x != 0)) {
+			if check_signature(&check_buf) {
 				entries.push(ArchiveEntry {
 					name: entries.len().to_string(),
 					data: file.subfile(cur_entry_start, boundary - cur_entry_start).unwrap(),

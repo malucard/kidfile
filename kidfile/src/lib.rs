@@ -105,10 +105,10 @@ fn decode_step<T: Into<DynData>>(data: &mut FileData, decoders: &[Decoder<T>], d
 }
 
 pub fn auto_decode_step(data: &mut FileData, disallow_id: Option<&'static str>, in_archive: Option<&'static str>) -> Result<(&'static str, DynData), String> {
-	if let Some(x) = decode_step(data, &IMAGE_DECODERS, disallow_id, false)? {
+	if let Some(x) = decode_step(data, &ARCHIVE_DECODERS, disallow_id, in_archive.is_some())? {
 		return Ok(x);
 	}
-	if let Some(x) = decode_step(data, &ARCHIVE_DECODERS, disallow_id, in_archive.is_some())? {
+	if let Some(x) = decode_step(data, &IMAGE_DECODERS, disallow_id, false)? {
 		return Ok(x);
 	}
 	if let Some(x) = decode_step(data, &DATA_DECODERS, disallow_id, false)? {
