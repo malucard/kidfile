@@ -3,6 +3,7 @@ use crate::file_data::FileData;
 use super::Decoder;
 
 mod afs;
+mod lnk;
 mod concat2k;
 
 pub struct ArchiveEntry {
@@ -18,5 +19,6 @@ pub struct Archive {
 
 pub const ARCHIVE_DECODERS: LazyLock<Vec<Decoder<Archive>>> = LazyLock::new(|| [
 	afs::ENTRY_AFS,
+	lnk::ENTRY_LNK,
 	concat2k::ENTRY_CONCAT2K
 ].into());
