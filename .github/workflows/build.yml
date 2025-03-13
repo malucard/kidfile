@@ -1,0 +1,61 @@
+name: Build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+  MACOSX_DEPLOYMENT_TARGET: 10.7
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - name: Build
+      run: |
+        rustup target add x86_64-unknown-linux-gnu
+        cargo build --package kidfile-explorer --release --locked --target x86_64-unknown-linux-gnu
+    - name: Upload binary
+      uses: actions/upload-artifact@v4
+      with:
+        name: kidfile-explorer-linux
+        path: ${{ github.workspace }}/target/x86_64-unknown-linux-gnu/release/kidfile-explorer
+        if-no-files-found: error
+  build-windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - name: Build
+      run: |
+        rustup target add x86_64-pc-windows-gnu
+        cargo build --package kidfile-explorer --release --locked --target x86_64-pc-windows-gnu
+    - name: Upload binary
+      uses: actions/upload-artifact@v4
+      with:
+        name: kidfile-explorer-windows
+        path: ${{ github.workspace }}/target/x86_64-pc-windows-gnu/release/kidfile-explorer.exe
+        if-no-files-found: error
+  build-macos:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - name: Build
+      run: |
+        rustup target add x86_64-apple-darwin
+        cargo build --package kidfile-explorer --release --locked --target x86_64-apple-darwin
+    - name: Upload binary
+      uses: actions/upload-artifact@v4
+      with:
+        name: kidfile-explorer-macos
+        path: ${{ github.workspace }}/target/x86_64-apple-darwin/release/kidfile-explorer
+        if-no-files-found: error
