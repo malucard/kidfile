@@ -1,8 +1,10 @@
+#![windows_subsystem = "windows"]
+
 use std::{borrow::Cow, cmp::Ordering, collections::HashMap, ffi::OsString, fs::File, io::{BufReader, Write}, path::{Path, PathBuf}, sync::{atomic::{self, AtomicBool, AtomicUsize}, LazyLock, RwLock}, time::{Duration, Instant}};
 use batch_decode::BatchDecode;
 use complex_path::ComplexPath;
 use data_view::DataView;
-use egui::{epaint::text::{FontInsert, FontPriority, InsertFontFamily}, popup, vec2, Align, Button, CentralPanel, Context, FontData, FontFamily, Grid, Key, Label, Layout, Modifiers, PopupCloseBehavior, Pos2, Rect, ScrollArea, Separator, TextStyle, TextWrapMode, TextureOptions, TopBottomPanel, Ui, UiBuilder, Vec2, ViewportBuilder};
+use egui::{epaint::text::{FontInsert, FontPriority, InsertFontFamily}, popup, vec2, Align, Button, CentralPanel, Context, FontData, FontFamily, Grid, Key, Label, Layout, Modifiers, PopupCloseBehavior, Pos2, Rect, ScrollArea, Separator, TextStyle, TextWrapMode, TextureOptions, TopBottomPanel, Ui, UiBuilder, Vec2, ViewportBuilder, Visuals};
 use egui_dock::{DockArea, DockState, NodeIndex, SurfaceIndex, TabAddAlign, TabViewer};
 use kidfile::{auto_decode_full, file_data::FileData, DynData};
 use rfd::FileDialog;
@@ -665,6 +667,7 @@ fn main() {
 			));
 			cc.egui_ctx.style_mut(|style| {
 				style.spacing.button_padding = vec2(8.0, 8.0);
+				style.visuals = Visuals::dark();
 			});
 			let mut tabs: Vec<ExplorerTab> = Vec::new();
 			let last = LAST_ACCESSED_PATH.read().unwrap().clone();
