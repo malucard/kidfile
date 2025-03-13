@@ -24,7 +24,7 @@ jobs:
     - name: Upload binary
       uses: actions/upload-artifact@v4
       with:
-        name: kidfile-explorer
+        name: kidfile-explorer-linux
         path: ${{ github.workspace }}/target/x86_64-unknown-linux-gnu/release/kidfile-explorer
         if-no-files-found: error
   build-windows:
@@ -40,7 +40,7 @@ jobs:
     - name: Upload binary
       uses: actions/upload-artifact@v4
       with:
-        name: kidfile-explorer
+        name: kidfile-explorer-windows
         path: ${{ github.workspace }}/target/x86_64-pc-windows-gnu/release/kidfile-explorer.exe
         if-no-files-found: error
   build-macos:
@@ -56,6 +56,6 @@ jobs:
     - name: Upload binary
       uses: actions/upload-artifact@v4
       with:
-        name: kidfile-explorer
+        name: kidfile-explorer-macos
         path: ${{ github.workspace }}/target/x86_64-apple-darwin/release/kidfile-explorer
         if-no-files-found: error
