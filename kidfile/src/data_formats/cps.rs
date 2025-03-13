@@ -43,10 +43,11 @@ fn decode(data: &mut FileData) -> Result<Box<[u8]>, String> {
 				out_cursor += 1;
 			}
 		} else { // raw chunk
-			let chunk_len = cur_byte + 1;
+			let mut chunk_len = cur_byte + 1;
 			in_cursor += 1;
 			if in_cursor + chunk_len > buf.len() {
-				return Err(format!("raw chunk went out of bounds"));
+				//return Err(format!("raw chunk went out of bounds"));
+				chunk_len = buf.len() - in_cursor;
 			}
 			if out_cursor + chunk_len > expected_size {
 				if cur_byte == 0 {
