@@ -15,6 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+      with:
+        submodules: recursive
     - name: Build
       run: cargo build --package kidfile-explorer --release --locked --target x86_64-unknown-linux-gnu
     - uses: actions/upload-artifact@v4
@@ -25,6 +27,8 @@ jobs:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v4
+      with:
+        submodules: recursive
     - name: Build
       run: cargo build --package kidfile-explorer --release --locked --target $TARGET
     - uses: actions/upload-artifact@v4
@@ -35,6 +39,8 @@ jobs:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v4
+      with:
+        submodules: recursive
     - name: Build
       run: cargo build --package kidfile-explorer --release --locked --target x86_64-apple-darwin
     - uses: actions/upload-artifact@v4
