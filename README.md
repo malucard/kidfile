@@ -20,4 +20,5 @@ Currently supports all images from Never7 on PS2 and most images from 12Riven on
 - Image formats:
   - OGDT
   - TIM2
+  - KLZ
   - common formats (PNG, BMP, etc)
