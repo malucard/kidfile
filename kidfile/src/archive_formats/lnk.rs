@@ -6,7 +6,7 @@ pub const ENTRY_LNK: Decoder<Archive> = Decoder {
 	desc: "KID PC archive",
 	detect: |file| Certainty::certain_if(file.starts_with(b"LNK\0")),
 	decode: |file| {
-		let count = file.get_u32_at(4).map_err(|_| "could not read signature")? as usize;
+		let count = file.read_u32_field(4, "signature")? as usize;
 		if count >= 0xFFFF {
 			return Err("impossibly large entry count".into());
 		}
@@ -14,8 +14,8 @@ pub const ENTRY_LNK: Decoder<Archive> = Decoder {
 		let mut index_ptr = 16;
 		let mut data_section_start = 16 + count * 32;
 		for _ in 0..count {
-			let offset = file.get_u32_at(index_ptr).map_err(|_| "could not read entry data")?;
-			let mut len = file.get_u32_at(index_ptr + 4).map_err(|_| "could not read entry data")?;
+			let offset = file.read_u32_field(index_ptr, "entry offset")?;
+			let mut len = file.read_u32_field(index_ptr + 4, "entry length")?;
 			let is_compressed = len & 1 != 0;
 			len >>= 1;
 			let mut name_buf = [0u8; 24];

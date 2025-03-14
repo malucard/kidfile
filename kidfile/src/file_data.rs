@@ -25,6 +25,31 @@ pub enum FileData {
 	}
 }
 
+macro_rules! impl_byte_readers {
+	($($t:ty),*) => {paste::paste! {$(
+		pub fn [<read_ $t _field>](&mut self, offset: usize, name: &'static str) -> Result<$t, String> {
+			let mut bytes = unsafe {std::mem::MaybeUninit::<[u8; size_of::<$t>()]>::uninit().assume_init()};
+			self.read_chunk_exact(&mut bytes, offset).map_err(#[cold] |_| format!("could not read {name}"))?;
+			Ok($t::from_le_bytes(bytes))
+		}
+		pub fn [<read_ $t _field_be>](&mut self, offset: usize, name: &'static str) -> Result<$t, String> {
+			let mut bytes = unsafe {std::mem::MaybeUninit::<[u8; size_of::<$t>()]>::uninit().assume_init()};
+			self.read_chunk_exact(&mut bytes, offset).map_err(#[cold] |_| format!("could not read {name}"))?;
+			Ok($t::from_be_bytes(bytes))
+		}
+		pub fn [<get_ $t _at>](&mut self, offset: usize) -> Option<$t> {
+			let mut bytes = unsafe {std::mem::MaybeUninit::<[u8; size_of::<$t>()]>::uninit().assume_init()};
+			self.read_chunk_exact(&mut bytes, offset).ok()?;
+			Some($t::from_le_bytes(bytes))
+		}
+		pub fn [<get_ $t _at_be>](&mut self, offset: usize) -> Option<$t> {
+			let mut bytes = unsafe {std::mem::MaybeUninit::<[u8; size_of::<$t>()]>::uninit().assume_init()};
+			self.read_chunk_exact(&mut bytes, offset).ok()?;
+			Some($t::from_be_bytes(bytes))
+		}
+	)*}}
+}
+
 impl FileData {
 	pub fn len(&self) -> usize {
 		match self {
@@ -155,86 +180,7 @@ impl FileData {
 		}
 	}
 
-	pub fn get_u8_at(&mut self, offset: usize) -> Result<u8, ()> {
-		let mut bytes = [0u8; 1];
-		self.read_chunk_exact(&mut bytes, offset)?;
-		Ok(u8::from_le_bytes(bytes))
-	}
-	pub fn get_u16_at(&mut self, offset: usize) -> Result<u16, ()> {
-		let mut bytes = [0u8; 2];
-		self.read_chunk_exact(&mut bytes, offset)?;
-		Ok(u16::from_le_bytes(bytes))
-	}
-	pub fn get_u32_at(&mut self, offset: usize) -> Result<u32, ()> {
-		let mut bytes = [0u8; 4];
-		self.read_chunk_exact(&mut bytes, offset)?;
-		Ok(u32::from_le_bytes(bytes))
-	}
-	pub fn get_u64_at(&mut self, offset: usize) -> Result<u64, ()> {
-		let mut bytes = [0u8; 8];
-		self.read_chunk_exact(&mut bytes, offset)?;
-		Ok(u64::from_le_bytes(bytes))
-	}
-	pub fn get_i8_at(&mut self, offset: usize) -> Result<i8, ()> {
-		let mut bytes = [0u8; 1];
-		self.read_chunk_exact(&mut bytes, offset)?;
-		Ok(i8::from_le_bytes(bytes))
-	}
-	pub fn get_i16_at(&mut self, offset: usize) -> Result<i16, ()> {
-		let mut bytes = [0u8; 2];
-		self.read_chunk_exact(&mut bytes, offset)?;
-		Ok(i16::from_le_bytes(bytes))
-	}
-	pub fn get_i32_at(&mut self, offset: usize) -> Result<i32, ()> {
-		let mut bytes = [0u8; 4];
-		self.read_chunk_exact(&mut bytes, offset)?;
-		Ok(i32::from_le_bytes(bytes))
-	}
-	pub fn get_i64_at(&mut self, offset: usize) -> Result<i64, ()> {
-		let mut bytes = [0u8; 8];
-		self.read_chunk_exact(&mut bytes, offset)?;
-		Ok(i64::from_le_bytes(bytes))
-	}
-	pub fn get_u8_be_at(&mut self, offset: usize) -> Result<u8, ()> {
-		let mut bytes = [0u8; 1];
-		self.read_chunk_exact(&mut bytes, offset)?;
-		Ok(u8::from_be_bytes(bytes))
-	}
-	pub fn get_u16_be_at(&mut self, offset: usize) -> Result<u16, ()> {
-		let mut bytes = [0u8; 2];
-		self.read_chunk_exact(&mut bytes, offset)?;
-		Ok(u16::from_be_bytes(bytes))
-	}
-	pub fn get_u32_be_at(&mut self, offset: usize) -> Result<u32, ()> {
-		let mut bytes = [0u8; 4];
-		self.read_chunk_exact(&mut bytes, offset)?;
-		Ok(u32::from_be_bytes(bytes))
-	}
-	pub fn get_u64_be_at(&mut self, offset: usize) -> Result<u64, ()> {
-		let mut bytes = [0u8; 8];
-		self.read_chunk_exact(&mut bytes, offset)?;
-		Ok(u64::from_be_bytes(bytes))
-	}
-	pub fn get_i8_be_at(&mut self, offset: usize) -> Result<i8, ()> {
-		let mut bytes = [0u8; 1];
-		self.read_chunk_exact(&mut bytes, offset)?;
-		Ok(i8::from_be_bytes(bytes))
-	}
-	pub fn get_i16_be_at(&mut self, offset: usize) -> Result<i16, ()> {
-		let mut bytes = [0u8; 2];
-		self.read_chunk_exact(&mut bytes, offset)?;
-		Ok(i16::from_be_bytes(bytes))
-	}
-	pub fn get_i32_be_at(&mut self, offset: usize) -> Result<i32, ()> {
-		let mut bytes = [0u8; 4];
-		self.read_chunk_exact(&mut bytes, offset)?;
-		Ok(i32::from_be_bytes(bytes))
-	}
-	pub fn get_i64_be_at(&mut self, offset: usize) -> Result<i64, ()> {
-		let mut bytes = [0u8; 8];
-		self.read_chunk_exact(&mut bytes, offset)?;
-		Ok(i64::from_be_bytes(bytes))
-	}
+	impl_byte_readers!(u8, u16, u32, u64, usize, i8, i16, i32, i64, isize);
 }
 
 impl Clone for FileData {

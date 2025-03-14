@@ -8,9 +8,11 @@ pub const ENTRY_LZSS: Decoder<Box<[u8]>> = Decoder {
 };
 
 fn decode_header(data: &mut FileData) -> Option<usize> {
-	match data.get_u32_at(0) {
-		Ok(size) if size > 32 && size < 32 * 1024 * 1024 && data.len() > 32 => Some(size as usize),
-		_ => None
+	let size = data.get_u32_at(0)?;
+	if size > 32 && size < 32 * 1024 * 1024 && data.len() > 32 {
+		Some(size as usize)
+	} else {
+		None
 	}
 }
 
@@ -33,6 +35,7 @@ fn decompress_lzss(inp: &[u8], expected_size: usize) -> Result<Box<[u8]>, Option
 	let mut flags = 0;
 	const N: usize = 4096;
 	const F: usize = 18;
+	const THRESHOLD: usize = 2;
 	let mut text_buf = [0u8; N + F - 1];
 	let mut r = N - F;
 	loop {
@@ -45,30 +48,28 @@ fn decompress_lzss(inp: &[u8], expected_size: usize) -> Result<Box<[u8]>, Option
 			}
 		}
 		if flags & 1 != 0 {
-			if let Some(c) = src.next() {
+			if let Some(c) = src.next().cloned() {
 				if out.len() >= expected_size {
 					return Err(None);
 				}
-				out.push(*c);
-				text_buf[r] = *c;
+				out.push(c);
+				text_buf[r] = c;
+				r = (r + 1) & N - 1;
+			}
+		} else if let (Some(i), Some(j)) = (src.next().cloned(), src.next().cloned()) {
+			let i = i as usize | (j as usize & 0xF0) << 4;
+			let j = (j as usize & 0x0F) + THRESHOLD;
+			for k in 0..=j {
+				let c = text_buf[(i + k) & (N - 1)];
+				if out.len() >= expected_size {
+					return Err(None);
+				}
+				out.push(c);
+				text_buf[r] = c;
 				r = (r + 1) & N - 1;
 			}
 		} else {
-			if let (Some(mut i), Some(mut j)) = (src.next().cloned(), src.next().cloned()) {
-				i |= (j & 0xF0) << 4;
-				j = (j & 0x0F) + 2;
-				for k in 0..=j {
-					let c = text_buf[(i as usize + k as usize) & (N - 1)];
-					if out.len() >= expected_size {
-						return Err(None);
-					}
-					out.push(c);
-					text_buf[r] = c;
-					r = (r + 1) & N - 1;
-				}
-			} else {
-				break;
-			}
+			break;
 		}
 	}
 	if out.len() == expected_size {

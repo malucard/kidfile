@@ -12,3 +12,4 @@ png = "0.17.16"
 bytemuck = "1.22.0"
 zune-inflate = "0.2.54"
 pulp = {version = "0.21.4", features = ["macro"]}
+paste = "1.0.15"

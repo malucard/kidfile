@@ -10,7 +10,7 @@ pub const ENTRY_LZSSBE: Decoder<Box<[u8]>> = Decoder {
 };
 
 fn decode(data: &mut FileData) -> Result<Box<[u8]>, String> {
-	let expected_size = data.get_u32_be_at(0).unwrap() as usize;
+	let expected_size = data.get_u32_at_be(0).unwrap() as usize;
 	println!("lzssbe expecting size {expected_size}, file size is {}", data.len());
 
 	let buf = &data.read().get(6..).ok_or("no data in file")?;

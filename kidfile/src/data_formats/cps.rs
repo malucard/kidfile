@@ -10,7 +10,7 @@ pub const ENTRY_CPS: Decoder<Box<[u8]>> = Decoder {
 };
 
 fn decode(data: &mut FileData) -> Result<Box<[u8]>, String> {
-	let expected_size = data.get_u32_be_at(0).unwrap() as usize >> 8;
+	let expected_size = data.get_u32_at_be(0).unwrap() as usize >> 8;
 	println!("cps expecting size {expected_size}, file size is {}", data.len());
 
 	let buf = &data.read()[3..];
