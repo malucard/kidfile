@@ -36,7 +36,7 @@ pub const ENTRY_BIP: Decoder<Image> = Decoder {
 						let palette = &bytes[palette_section..];
 						//let tile_pixel_data = pixel_section; // + bytes.read_u16(index_section + 2)? as usize * 1024;
 						let frame = cur_frame.get_or_insert_with(|| Frame::empty(og_full_width, og_full_height, PixelFormat::RgbaClut8));
-						// this part is SUPER quirky. the source image is split into 30x30 blocks, but the last 2 rows and columns are
+						// this part is SUPER quirky. the source image is split into 30x30 blocks, but the first and last rows and columns are
 						// repeated so the blocks grow to 32x32. however, the blocks aren't stored sequentially, but rather as an image
 						// with its width forced to 512. if the real width is 512, it can be directly read as an image but the
 						// repeated pixels in the blocks will be visible. if it's not 512 the rows of blocks wrap and that breaks.
@@ -50,12 +50,8 @@ pub const ENTRY_BIP: Decoder<Image> = Decoder {
 								if src_block_start + 30 >= bytes.len() {
 									break;
 								}
-								let row = Frame::from_rgba_clut8(30, 1, palette, &bytes[src_block_start..]);
-								if false {
-									frame.paste(dst_block_x_idx * 30 + dst_block_y_idx * tile_x_blocks * 30, dst_y - dst_y_start + tile_idx as u32 * 30, &row); // TODO: revert
-								} else {
-									frame.paste(tile_x + dst_block_x_idx * 30, dst_y, &row);
-								}
+								let row = Frame::from_rgba_clut8(30, 1, palette, &bytes[src_block_start + 1..]);
+								frame.paste(tile_x + dst_block_x_idx * 30, dst_y, &row);
 								src_block_start += 512;
 							}
 							src_block_x_idx += 1;

@@ -8,17 +8,19 @@ This is an attempt to collect code to decode all file formats in the Infinity se
 Kidfile is a library that can be used by other projects to handle supported files easily.
 Kidfile Explorer is an application that can navigate, preview and convert those files in batch.
 
-Currently supports all images from Never7 on PS2 and most images from 12Riven on PC. Lots of other formats used in the other games and releases are missing, but it's not hard to add support for each.
+Currently supports images in most of the PS2 games and their late PSP and PC ports.
 
-- Archive formats:
-  - AFS
-  - LNK
-  - Concatenated files aligned to 2KiB
-- Compression formats:
-  - LZSS/BIP
-  - CPS (PS2)
 - Image formats:
   - OGDT
   - TIM2
-  - KLZ
+  - BIP (all)
+  - GIM (PSP)
+  - KLZ (PC)
   - common formats (PNG, BMP, etc)
+- Archive formats:
+  - AFS
+  - LNK (partial)
+  - Concatenated OGDT/TIM2 images
+- Compression formats:
+  - LZSS
+  - CPS (PS2)
