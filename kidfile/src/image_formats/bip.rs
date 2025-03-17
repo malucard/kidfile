@@ -44,7 +44,7 @@ pub const ENTRY_BIP: Decoder<Image> = Decoder {
 						let mut dst_block_x_idx = 0;
 						let mut dst_block_y_idx = 0;
 						for _ in 0..tile_x_blocks * tile_y_blocks {
-							let mut src_block_start = pixel_section + (src_block_y_idx * (512 * 32) + src_block_x_idx * 32) as usize;
+							let mut src_block_start = pixel_section + (src_block_y_idx * (512 * 32) + 512 + src_block_x_idx * 32) as usize;
 							let dst_y_start = tile_y + dst_block_y_idx * 30;
 							for dst_y in dst_y_start..dst_y_start + 30 {
 								if src_block_start + 30 >= bytes.len() {
