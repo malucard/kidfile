@@ -2,16 +2,15 @@ use crate::{Certainty, Decoder};
 use super::{Archive, ArchiveEntry};
 
 // it's annoying that this has to exist, but here we go
-// this is a decoder that detects concatenated files based on the heuristic of...
-// finding 2048 byte boundaries following an amount of null bytes and at least one non-null byte in the next bytes
-// really hoping that doesn't cause false positives
+// files on N7 PS2 are literally just aligned and concatenated, without even file name info
+// here we simply use the heuristic of checking for TIM2 and OGDT signatures every 2048 bytes
 
 const ALIGNMENT: usize = 2048;
 
 pub const ENTRY_CONCAT2K: Decoder<Archive> = Decoder {
 	id: "concat2k",
-	desc: "Not an actual format, just concatenated files aligned to 2048 bytes",
-	detect: |file| Certainty::possible_if(file.len() > ALIGNMENT * 2 && !file.starts_with(b"\x7FELF") && !file.starts_with(b"\0\0\x01\xBA") && {
+	desc: "Not an actual format, just concatenated images aligned to 2048 bytes",
+	detect: |file| Certainty::possible_if(file.len() > ALIGNMENT * 2 && !file.starts_with(b"\0\0\x01\xBA") && {
 		let mut boundary = ALIGNMENT;
 		loop {
 			let mut check_buf = [0u8; 8];
@@ -31,9 +30,10 @@ pub const ENTRY_CONCAT2K: Decoder<Archive> = Decoder {
 		loop {
 			let mut check_buf = [0u8; 8];
 			if file.read_chunk_exact(&mut check_buf, boundary).is_err() {
+				let name = entries.len().to_string();
 				entries.push(ArchiveEntry {
-					name: entries.len().to_string(),
-					data: file.subfile(cur_entry_start, file.len() - cur_entry_start).unwrap(),
+					name: name.clone(),
+					data: file.subfile(cur_entry_start, file.len() - cur_entry_start, name.into()).unwrap(),
 					timestamp: None
 				});
 				if entries.len() > 1 {
@@ -43,9 +43,10 @@ pub const ENTRY_CONCAT2K: Decoder<Archive> = Decoder {
 				}
 			}
 			if check_signature(&check_buf) {
+				let name = entries.len().to_string();
 				entries.push(ArchiveEntry {
-					name: entries.len().to_string(),
-					data: file.subfile(cur_entry_start, boundary - cur_entry_start).unwrap(),
+					name: name.clone(),
+					data: file.subfile(cur_entry_start, boundary - cur_entry_start, name.into()).unwrap(),
 					timestamp: None
 				});
 				cur_entry_start = boundary;

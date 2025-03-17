@@ -145,15 +145,7 @@ impl BatchDecode {
 	}
 
 	fn clean_threads(&mut self) {
-		let mut to_remove = Vec::new();
-		for (i, thread) in self.threads.iter().enumerate().rev() {
-			if thread.is_finished() {
-				to_remove.push(i);
-			}
-		}
-		for i in to_remove {
-			self.threads.swap_remove(i);
-		}
+		self.threads.retain(|thread| !thread.is_finished());
 	}
 
 	pub fn show(&mut self, ctx: &Context) -> bool {

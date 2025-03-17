@@ -6,7 +6,7 @@ use complex_path::ComplexPath;
 use data_view::DataView;
 use egui::{epaint::text::{FontInsert, FontPriority, InsertFontFamily}, popup, vec2, Align, Button, CentralPanel, Context, FontData, FontFamily, Grid, Key, Label, Layout, Modifiers, PopupCloseBehavior, Pos2, Rect, ScrollArea, Separator, TextStyle, TextWrapMode, TextureOptions, TopBottomPanel, Ui, UiBuilder, Vec2, ViewportBuilder, Visuals};
 use egui_dock::{DockArea, DockState, NodeIndex, SurfaceIndex, TabAddAlign, TabViewer};
-use kidfile::{auto_decode_full, file_data::FileData, DynData};
+use kidfile::{auto_decode_full, DynData};
 use rfd::FileDialog;
 use serde_json::Value;
 
@@ -129,7 +129,7 @@ struct ExplorerTab {
 	pub id: usize,
 	pub path: ComplexPath,
 	pub children: Vec<ExplorerEntry>,
-	pub selection: Option<(usize, DynData, Vec<&'static str>)>,
+	pub selection: Option<(usize, Vec<&'static str>)>,
 	pub view: DataView,
 	pub selection_size: Option<usize>,
 	pub past: Vec<ComplexPath>,
@@ -180,16 +180,16 @@ impl ExplorerTab {
 					let in_archive = self.path.get_archive_format();
 					if let Ok(mut file_data) = self.path.load_file(&c.name) {
 						let mut len = file_data.len();
-						let mut decoded = auto_decode_full(file_data.to_mut(), in_archive);
+						let decoded = auto_decode_full(file_data.to_mut(), in_archive);
 						match decoded.data {
-							DynData::Raw(ref mut raw_data) => {
+							DynData::Raw(raw_data) => {
 								let msg = if decoded.steps_taken.is_empty() {
 									format!("no steps taken; {}", decoded.error_msg)
 								} else {
 									format!("steps taken: {}; {}", decoded.steps_taken.join(" -> "), decoded.error_msg)
 								};
-								self.view = DataView::new_raw(raw_data, msg);
 								len = raw_data.len();
+								self.view = DataView::new_raw(raw_data, c.name.clone(), msg);
 							}
 							DynData::Image(ref img) =>{
 								let mut frames = Vec::new();
@@ -206,7 +206,7 @@ impl ExplorerTab {
 								return;
 							}
 						}
-						self.selection = Some((idx, decoded.data, decoded.steps_taken));
+						self.selection = Some((idx, decoded.steps_taken));
 						self.selection_size = Some(len);
 					}
 					break;
@@ -225,7 +225,7 @@ impl ExplorerTab {
 
 	pub fn select(&mut self, ctx: &Context, idx: usize) {
 		if idx < self.children.len() {
-			self.selection = Some((idx, DynData::Raw(FileData::Memory {buf: Box::new([])}), Vec::new()));
+			self.selection = Some((idx, Vec::new()));
 			self.refresh(ctx);
 		} else {
 			self.selection = None;

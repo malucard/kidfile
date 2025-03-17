@@ -1,4 +1,4 @@
-use std::{fs::File, io::{BufReader, Read, Seek, SeekFrom}, path::PathBuf};
+use std::{ffi::OsString, fs::File, io::{BufReader, Read, Seek, SeekFrom}, path::PathBuf};
 
 pub enum FileData {
 	Memory {
@@ -27,14 +27,14 @@ pub enum FileData {
 
 macro_rules! impl_byte_readers {
 	($($t:ty),*) => {paste::paste! {$(
-		pub fn [<read_ $t _field>](&mut self, offset: usize, name: &'static str) -> Result<$t, String> {
+		pub fn [<read_ $t>](&mut self, offset: usize) -> Result<$t, String> {
 			let mut bytes = unsafe {std::mem::MaybeUninit::<[u8; size_of::<$t>()]>::uninit().assume_init()};
-			self.read_chunk_exact(&mut bytes, offset).map_err(#[cold] |_| format!("could not read {name}"))?;
+			self.read_chunk_exact(&mut bytes, offset).map_err(#[cold] |_| format!("error reading field"))?;
 			Ok($t::from_le_bytes(bytes))
 		}
-		pub fn [<read_ $t _field_be>](&mut self, offset: usize, name: &'static str) -> Result<$t, String> {
+		pub fn [<read_ $t _be>](&mut self, offset: usize) -> Result<$t, String> {
 			let mut bytes = unsafe {std::mem::MaybeUninit::<[u8; size_of::<$t>()]>::uninit().assume_init()};
-			self.read_chunk_exact(&mut bytes, offset).map_err(#[cold] |_| format!("could not read {name}"))?;
+			self.read_chunk_exact(&mut bytes, offset).map_err(#[cold] |_| format!("error reading field"))?;
 			Ok($t::from_be_bytes(bytes))
 		}
 		pub fn [<get_ $t _at>](&mut self, offset: usize) -> Option<$t> {
@@ -53,18 +53,18 @@ macro_rules! impl_byte_readers {
 impl FileData {
 	pub fn len(&self) -> usize {
 		match self {
-			Self::Memory {buf} => buf.len(),
+			Self::Memory {buf, ..} => buf.len(),
 			Self::MemoryCompressed {full_size, ..} => *full_size,
 			Self::Stream {size, ..} => *size,
 			Self::StreamCompressed {full_size, ..} => *full_size
 		}
 	}
 
-	pub fn subfile(&mut self, sub_start: usize, sub_size: usize) -> Result<FileData, ()> {
+	pub fn subfile(&mut self, sub_start: usize, sub_size: usize, file_name: OsString) -> Result<FileData, String> {
 		match self {
 			Self::Stream {path, start, size, ..} => {
 				if sub_start + sub_size > *size {
-					return Err(());
+					return Err("subfile request is beyond file end".into());
 				}
 				Ok(Self::Stream {
 					path: path.clone(),
@@ -75,7 +75,7 @@ impl FileData {
 			}
 			_ => {
 				let mut buf = unsafe {Box::new_uninit_slice(sub_size).assume_init()};
-				self.read_chunk_exact(&mut buf, sub_start)?;
+				self.read_chunk_exact(&mut buf, sub_start).map_err(|_| "subfile request is beyond file end")?;
 				Ok(Self::Memory {buf})
 			}
 		}
@@ -141,7 +141,7 @@ impl FileData {
 			}
 		}
 		match self {
-			Self::Memory {buf} => out_buf.copy_from_slice(&buf.get(chunk_start..chunk_start + out_buf.len()).ok_or(())?),
+			Self::Memory {buf, ..} => out_buf.copy_from_slice(&buf.get(chunk_start..chunk_start + out_buf.len()).ok_or(())?),
 			_ => unreachable!()
 		}
 		Ok(())
@@ -149,7 +149,7 @@ impl FileData {
 
 	pub fn read(&mut self) -> &[u8] {
 		match self {
-			Self::Memory {buf} => return buf,
+			Self::Memory {buf, ..} => return buf,
 			Self::MemoryCompressed {buf, full_size, decompress} => {
 				*self = Self::Memory {buf: decompress(std::mem::take(buf), *full_size)};
 			}
@@ -175,7 +175,7 @@ impl FileData {
 			}
 		}
 		match self {
-			Self::Memory {buf} => buf,
+			Self::Memory {buf, ..} => buf,
 			_ => unreachable!()
 		}
 	}

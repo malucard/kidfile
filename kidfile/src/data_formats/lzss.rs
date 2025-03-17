@@ -18,7 +18,6 @@ fn decode_header(data: &mut FileData) -> Option<usize> {
 
 fn decode(data: &mut FileData) -> Result<Box<[u8]>, String> {
 	if let Some(expected_size) = decode_header(data) {
-		println!("lzss expecting size {expected_size}, file size is {}", data.len());
 		match decompress_lzss(&data.read()[4..], expected_size) {
 			Ok(decompressed) => Ok(decompressed),
 			Err(Some(actual_size)) => Err(format!("expected {expected_size} bytes when decompressing, got only {actual_size}")),

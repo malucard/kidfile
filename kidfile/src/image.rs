@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, mem::MaybeUninit};
 use bytemuck::{Pod, Zeroable};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -23,6 +23,45 @@ pub enum PixelFormat {
 	BgraClut4,
 	BgrxClut4,
 	BgrClut4
+}
+
+impl PixelFormat {
+	pub fn bpp(self) -> usize {
+		match self {
+			PixelFormat::Rgba => 32,
+			PixelFormat::Rgbx => 32,
+			PixelFormat::Rgb => 24,
+			PixelFormat::Bgra => 32,
+			PixelFormat::Bgrx => 32,
+			PixelFormat::Bgr => 24,
+			PixelFormat::Rgba16 => 16,
+			PixelFormat::Rgb16 => 16,
+			PixelFormat::RgbaClut8 => 8,
+			PixelFormat::RgbxClut8 => 8,
+			PixelFormat::RgbClut8 => 8,
+			PixelFormat::BgraClut8 => 8,
+			PixelFormat::BgrxClut8 => 8,
+			PixelFormat::BgrClut8 => 8,
+			PixelFormat::RgbaClut4 => 4,
+			PixelFormat::RgbxClut4 => 4,
+			PixelFormat::RgbClut4 => 4,
+			PixelFormat::BgraClut4 => 4,
+			PixelFormat::BgrxClut4 => 4,
+			PixelFormat::BgrClut4 => 4
+		}
+	}
+}
+
+impl<'a> From<&png::Info<'a>> for PixelFormat {
+	fn from(info: &png::Info) -> Self {
+		match (info.color_type, info.bit_depth) {
+			(png::ColorType::Indexed, png::BitDepth::Four) => PixelFormat::BgraClut4,
+			(png::ColorType::Indexed, png::BitDepth::Eight) => PixelFormat::BgraClut8,
+			(png::ColorType::Rgb, _) => PixelFormat::Bgr,
+			(png::ColorType::Rgba, _) => PixelFormat::Bgra,
+			_ => unreachable!()
+		}
+	}
 }
 
 impl Display for PixelFormat {
@@ -53,12 +92,12 @@ impl Display for PixelFormat {
 }
 
 #[repr(C)]
-#[derive(Zeroable, Pod, Clone, Copy)]
+#[derive(Zeroable, Pod, Clone, Copy, Default)]
 pub struct Pixel {
-	r: u8,
-	g: u8,
-	b: u8,
-	a: u8
+	pub r: u8,
+	pub g: u8,
+	pub b: u8,
+	pub a: u8
 }
 
 pub struct Frame {
@@ -311,6 +350,11 @@ impl Frame {
 		}
 	}
 
+	pub fn with_og_fmt(mut self, og_fmt: PixelFormat) -> Self {
+		self.og_fmt = og_fmt;
+		self
+	}
+
 	pub fn with_double_alpha(mut self) -> Self {
 		for p in &mut self.pixels {
 			p.a = (p.a as u16 * 255 / 128).min(255) as u8;
@@ -328,8 +372,75 @@ impl Frame {
 		&mut self.pixels[y as usize * w..y as usize * w + w]
 	}
 
+	pub fn resize(&mut self, w: u32, h: u32) {
+		let mut pixels = if w == self.width {
+			self.pixels.to_vec()
+		} else {
+			let mut pixels = Vec::with_capacity((w * h) as usize);
+			let common_w = self.width.min(w);
+			let common_h = self.height.min(h);
+			for y in 0..common_h {
+				for x in 0..common_w {
+					pixels.push(self.pixels[(y * self.width + x) as usize]);
+				}
+				for _ in common_w..w {
+					pixels.push(Pixel::zeroed());
+				}
+			}
+			pixels
+		};
+		pixels.resize((w * h) as usize, Pixel::zeroed());
+		self.pixels = pixels.into_boxed_slice();
+		self.width = w;
+		self.height = h;
+	}
+
+	pub fn resized(mut self, w: u32, h: u32) -> Self {
+		self.resize(w, h);
+		self
+	}
+
+	pub fn crushed_down(mut self, w: u32, h: u32) -> Self {
+		if w == self.width && h == self.height {
+			return self;
+		}
+		let mut pixels = self.pixels.into_vec();
+		let xchunks = self.width / 32;
+		let ychunks = self.height / 32;
+		let dst_chunk_width = 32 * w / self.width;
+		let dst_chunk_height = 32 * h / self.height;
+		let mut dst_idx = 0;
+		for chunk_y_idx in 0..ychunks {
+			for sub_y in 0..dst_chunk_height {
+				for chunk_x_idx in 0..xchunks {
+					for sub_x in 0..dst_chunk_width {
+						pixels[dst_idx] = pixels[((chunk_y_idx * 32 + sub_y) * self.width + chunk_x_idx * 32 + sub_x) as usize];
+						dst_idx += 1;
+					}
+				}
+			}
+		}
+		pixels.resize((w * h) as usize, Pixel::zeroed());
+		self.pixels = pixels.into();
+		self.width = w;
+		self.height = h;
+		self
+	}
+
 	pub fn paste(&mut self, x: u32, y: u32, o: &Frame) {
-		assert!(x + o.width <= self.width && y + o.height <= self.height);
+		let end_x = (x + o.width).min(self.width);
+		let end_y = (y + o.height).min(self.height);
+		if end_x > x && end_y > y {
+			for row_y in y..end_y {
+				self.row_mut(row_y)[x as usize..end_x as usize].copy_from_slice(&o.row(row_y - y)[..(end_x - x) as usize]);
+			}
+		}
+	}
+
+	pub fn paste_resizing(&mut self, x: u32, y: u32, o: &Frame) {
+		if x + o.width > self.width || y + o.height > self.height {
+			self.resize(self.width.max(x + o.width), self.height.max(y + o.height));
+		}
 		for oy in 0..o.height {
 			self.row_mut(y + oy)[x as usize..(x + o.width) as usize].copy_from_slice(o.row(oy));
 		}

@@ -49,6 +49,12 @@ pub enum DynData {
 	Image(Image)
 }
 
+impl Default for DynData {
+	fn default() -> Self {
+		Self::Raw(FileData::Memory {buf: Box::new([])})
+	}
+}
+
 impl From<FileData> for DynData {
 	fn from(value: FileData) -> Self {
 		Self::Raw(value)

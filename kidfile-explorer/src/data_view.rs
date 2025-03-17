@@ -1,3 +1,4 @@
+use std::ffi::OsString;
 use egui::{Align, ColorImage, Layout, ScrollArea, TextEdit, TextureHandle, Ui, Vec2};
 use kidfile::{file_data::FileData, image::PixelFormat};
 
@@ -6,6 +7,8 @@ use crate::icon_button;
 pub enum DataView {
 	None,
 	Raw {
+		file_data: FileData,
+		file_name: OsString,
 		hex: String,
 		error_msg: String,
 		reset_view: bool
@@ -14,7 +17,7 @@ pub enum DataView {
 }
 
 impl DataView {
-	pub fn new_raw(file_data: &mut FileData, error_msg: String) -> Self {
+	pub fn new_raw(mut file_data: FileData, file_name: OsString, error_msg: String) -> Self {
 		const MAX_LEN: usize = 2048;
 		const BYTES_IN_LINE: usize = 16;
 		let mut buf = unsafe {Box::new_uninit_slice(file_data.len().min(MAX_LEN)).assume_init()};
@@ -48,18 +51,25 @@ impl DataView {
 			} else {
 				hex += &format!("file displayed in full, size is 0x{:X}/{}", file_data.len(), file_data.len());
 			}
-			Self::Raw {hex, error_msg, reset_view: true}
+			Self::Raw {file_data, file_name, hex, error_msg, reset_view: true}
 		} else {
-			Self::Raw {hex: "<error reading file>".into(), error_msg, reset_view: true}
+			Self::Raw {file_data, file_name, hex: "<error reading file>".into(), error_msg, reset_view: true}
 		}
 	}
 
 	pub fn ui(&mut self, ui: &mut Ui) {
 		match self {
 			Self::None => {}
-			Self::Raw {hex, error_msg, reset_view} => {
+			Self::Raw {file_data, file_name, hex, error_msg, reset_view} => {
 				ui.vertical(|ui| {
-					ui.label(error_msg.as_str());
+					ui.horizontal(|ui| {
+						ui.label(error_msg.as_str());
+						if ui.add(icon_button!("icons/edit-download.svg").small()).on_hover_text("Save").clicked() {
+							if let Some(dst) = rfd::FileDialog::new().set_file_name(file_name.to_string_lossy()).save_file() {
+								std::fs::write(dst, file_data.read()).unwrap();
+							}
+						}
+					});
 					ScrollArea::both().id_salt("hex").show(ui, |ui| {
 						if *reset_view {
 							ui.scroll_to_cursor(Some(Align::Min));
@@ -75,13 +85,14 @@ impl DataView {
 				});
 			}
 			Self::Image(frames) => {
-				const OTHER_FRAMES_WIDTH: f32 = 128.0;
 				ui.with_layout(Layout::right_to_left(Align::TOP), |ui| {
 					if frames.len() > 1 {
+						const OTHER_FRAMES_WIDTH: f32 = 160.0;
+						const OTHER_FRAMES_HEIGHT: f32 = 128.0;
 						ui.allocate_ui(Vec2::new(OTHER_FRAMES_WIDTH, ui.available_height()), |ui| {
 							ScrollArea::vertical().show(ui, |ui| {
 								ui.set_min_width(OTHER_FRAMES_WIDTH);
-								ui.vertical(|ui| {
+								ui.vertical_centered_justified(|ui| {
 									for (frame_idx, (egui_img, tex, fmt)) in frames.iter().enumerate().skip(1) {
 										if frame_idx >= 2 {
 											ui.separator();
@@ -92,7 +103,7 @@ impl DataView {
 												ui.ctx().copy_image(egui_img.clone());
 											}
 										});
-										ui.add(egui::Image::new(tex).fit_to_exact_size(Vec2::new(OTHER_FRAMES_WIDTH, OTHER_FRAMES_WIDTH)));
+										ui.add(egui::Image::new(tex).fit_to_exact_size(Vec2::new(OTHER_FRAMES_WIDTH, OTHER_FRAMES_HEIGHT)));
 									}
 								});
 							});
