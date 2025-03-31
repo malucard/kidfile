@@ -36,10 +36,11 @@ fn decompress_lzss_dc(inp: &[u8], expected_size: usize) -> Result<Box<[u8]>, Opt
 	while out.len() < expected_size {
 		let chunk_size = src.next_u16_be().ok_or(out.len())? as usize;
 		let mut chunk = src.by_ref().take(chunk_size);
+		let chunk_out_start = out.len();
 		// the flags byte determines whether the next 8 tokens are literals or references
-		while let Some(mut flags) = chunk.next() {
-			for _ in 0..8 {
-				if flags & 1 == 0 { // literal token
+		while let Some(flags) = chunk.next() {
+			for i in 0..8 {
+				if flags & (1 << i) == 0 { // literal token
 					if let Some(byte) = chunk.next() {
 						if out.len() >= expected_size {
 							return Err(None);
@@ -60,10 +61,13 @@ fn decompress_lzss_dc(inp: &[u8], expected_size: usize) -> Result<Box<[u8]>, Opt
 						return Err(None);
 					}
 					for i in start..start + ref_len {
-						out.push(*out.get(i).ok_or(None)?);
+						if i < chunk_out_start {
+							out.push(0xFF);
+						} else {
+							out.push(*out.get(i).ok_or(None)?);
+						}
 					}
 				}
-				flags >>= 1;
 			}
 		}
 	}
