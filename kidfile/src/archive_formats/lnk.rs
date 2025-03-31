@@ -24,7 +24,7 @@ pub const ENTRY_LNK: Decoder<Archive> = Decoder {
 			let name = String::from_utf8(name_buf[0..name_len].to_vec()).map_err(|_| "entry name is not valid UTF-8")?;
 			entries.push(ArchiveEntry {
 				name: name.clone(),
-				data: file.subfile(data_section_start + offset as usize, len as usize, name.into()).unwrap(),
+				data: file.subfile(data_section_start + offset as usize, len as usize).unwrap(),
 				timestamp: None
 			});
 			index_ptr += 32;

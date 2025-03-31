@@ -131,6 +131,10 @@ fn bits_6_to_8(x: u8) -> u8 {
 	x << 2 | (x & 1) << 1 | (x & 1)
 }
 
+fn bit_twiddle(x: usize) -> usize {
+	(x & 1) | (x & 2) << 1 | (x & 4) << 2 | (x & 8) << 3 | (x & 16) << 4 | (x & 32) << 5 | (x & 64) << 6 | (x & 128) << 7 | (x & 256) << 8 | (x & 512) << 9
+}
+
 impl Frame {
 	pub fn empty(width: u32, height: u32, og_fmt: PixelFormat) -> Self {
 		Self {
@@ -501,6 +505,19 @@ impl Frame {
 		self.pixels = pixels.into();
 		self.width = w;
 		self.height = h;
+		self
+	}
+
+	pub fn twiddled_dc(mut self) -> Self {
+		let mut pixels = Vec::with_capacity(self.pixels.len());
+		for y in 0..self.width as usize {
+			let twiddled_y = bit_twiddle(y);
+			for x in 0..self.height as usize {
+				pixels.push(self.pixels[twiddled_y | bit_twiddle(x) << 1]);
+			}
+		}
+		self.pixels = pixels.into();
+		std::mem::swap(&mut self.width, &mut self.height);
 		self
 	}
 

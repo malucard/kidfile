@@ -34,7 +34,7 @@ pub const ENTRY_AFS: Decoder<Archive> = Decoder {
 			let name = String::from_utf8(name_buf[0..len].to_vec()).map_err(|_| "entry name is not valid UTF-8")?;
 			entries.push(ArchiveEntry {
 				name: name.clone(),
-				data: file.subfile(entry_ranges[i].0, entry_ranges[i].1, name.into()).unwrap(),
+				data: file.subfile(entry_ranges[i].0, entry_ranges[i].1).unwrap(),
 				timestamp: Some((year, month, day, hour, minute, second))
 			});
 		}

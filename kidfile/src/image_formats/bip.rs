@@ -3,7 +3,7 @@ use crate::{byte_slice::ByteSlice, image::{Frame, Image, PixelFormat}, Certainty
 pub const ENTRY_BIP: Decoder<Image> = Decoder {
 	id: "bip",
 	desc: "Remember11 image format",
-	detect: |file| Certainty::certain_if(file.starts_with(&[5, 0, 0, 0]) || file.starts_with(&[10, 0, 0, 0])),
+	detect: |file| Certainty::certain_if(matches!(file.get_u32_at(0), Some(5 | 10))),
 	decode: |file| {
 		let mut frames = Vec::new();
 		let bytes = file.read();

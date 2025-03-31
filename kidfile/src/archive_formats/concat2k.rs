@@ -33,7 +33,7 @@ pub const ENTRY_CONCAT2K: Decoder<Archive> = Decoder {
 				let name = entries.len().to_string();
 				entries.push(ArchiveEntry {
 					name: name.clone(),
-					data: file.subfile(cur_entry_start, file.len() - cur_entry_start, name.into()).unwrap(),
+					data: file.subfile(cur_entry_start, file.len() - cur_entry_start).unwrap(),
 					timestamp: None
 				});
 				if entries.len() > 1 {
@@ -46,7 +46,7 @@ pub const ENTRY_CONCAT2K: Decoder<Archive> = Decoder {
 				let name = entries.len().to_string();
 				entries.push(ArchiveEntry {
 					name: name.clone(),
-					data: file.subfile(cur_entry_start, boundary - cur_entry_start, name.into()).unwrap(),
+					data: file.subfile(cur_entry_start, boundary - cur_entry_start).unwrap(),
 					timestamp: None
 				});
 				cur_entry_start = boundary;

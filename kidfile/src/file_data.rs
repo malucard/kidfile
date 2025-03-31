@@ -60,7 +60,7 @@ impl FileData {
 		}
 	}
 
-	pub fn subfile(&mut self, sub_start: usize, sub_size: usize, file_name: OsString) -> Result<FileData, String> {
+	pub fn subfile(&mut self, sub_start: usize, sub_size: usize) -> Result<FileData, String> {
 		match self {
 			Self::Stream {path, start, size, ..} => {
 				if sub_start + sub_size > *size {
