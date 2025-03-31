@@ -2,10 +2,10 @@ use crate::{byte_iter::ByteIter, file_data::FileData, Certainty, Decoder};
 
 // thanks to BoilingTeapot for reverse engineering the compression
 
-pub const ENTRY_LZSS_DC: Decoder<Box<[u8]>> = Decoder {
-	id: "lzss-dc",
-	desc: "LZSS variant used in N7 DC",
-	detect: |buf| Certainty::possible_if(decode_header(buf).is_some()),
+pub const ENTRY_LZSS_BE: Decoder<Box<[u8]>> = Decoder {
+	id: "lzss-be",
+	desc: "LZSS-like used in N7 DC and 12R PS2",
+	detect: |buf| Certainty::certain_if(decode_header(buf).is_some()),
 	decode
 };
 
@@ -20,9 +20,9 @@ fn decode_header(data: &mut FileData) -> Option<usize> {
 
 fn decode(data: &mut FileData) -> Result<Box<[u8]>, String> {
 	if let Some(expected_size) = decode_header(data) {
-		match decompress_lzss_dc(&data.read()[4..], expected_size) {
+		match decompress_lzss_be(&data.read()[4..], expected_size) {
 			Ok(decompressed) => Ok(decompressed),
-			Err(Some(actual_size)) => Err(format!("expected {expected_size} bytes when decompressing, got only {actual_size}")),
+			Err(Some(actual_size)) => Err(format!("expected {expected_size} bytes when decompressing, got {actual_size}")),
 			Err(None) => Err(format!("error while decompressing"))
 		}
 	} else {
@@ -30,11 +30,11 @@ fn decode(data: &mut FileData) -> Result<Box<[u8]>, String> {
 	}
 }
 
-fn decompress_lzss_dc(inp: &[u8], expected_size: usize) -> Result<Box<[u8]>, Option<usize>> {
+fn decompress_lzss_be(inp: &[u8], expected_size: usize) -> Result<Box<[u8]>, Option<usize>> {
 	let mut out = Vec::with_capacity(expected_size);
 	let mut src = inp.iter().cloned();
 	while out.len() < expected_size {
-		let chunk_size = src.next_u16_be().ok_or(out.len())? as usize;
+		let chunk_size = src.next_u16_be().ok_or(Some(out.len()))? as usize;
 		let mut chunk = src.by_ref().take(chunk_size);
 		let chunk_out_start = out.len();
 		// the flags byte determines whether the next 8 tokens are literals or references
@@ -43,25 +43,21 @@ fn decompress_lzss_dc(inp: &[u8], expected_size: usize) -> Result<Box<[u8]>, Opt
 				if flags & (1 << i) == 0 { // literal token
 					if let Some(byte) = chunk.next() {
 						if out.len() >= expected_size {
-							return Err(None);
+							break;
 						}
 						out.push(byte);
 					} else {
 						break;
 					}
-				} else { // reference token
-					let ref_value = chunk.next_u16_be().ok_or(None)? as usize;
-					let ref_off = (ref_value >> 5) + 1;
-					let ref_len = (ref_value & 0b11111) + 3;
-					if ref_off >= out.len() {
+				} else if let Some(ref_value) = chunk.next_u16_be() { // reference token
+					let ref_off = (ref_value as usize >> 5) + 1;
+					let ref_len = (ref_value as usize & 0b11111) + 3;
+					let start = out.len() as isize - ref_off as isize;
+					if ref_len > expected_size - out.len() {
 						return Err(None);
 					}
-					let start = out.len() - ref_off;
-					if out.len() + ref_len > expected_size {
-						return Err(None);
-					}
-					for i in start..start + ref_len {
-						out.push(*out.get(i.max(chunk_out_start)).ok_or(None)?);
+					for i in start..start + ref_len as isize {
+						out.push(*out.get(i.max(chunk_out_start as isize) as usize).ok_or(None)?);
 					}
 				}
 			}

@@ -3,10 +3,10 @@ use super::Decoder;
 
 mod lzss;
 mod cps;
-mod lzss_dc;
+mod lzss_be;
 
 pub const DATA_DECODERS: LazyLock<Vec<Decoder<Box<[u8]>>>> = LazyLock::new(|| [
 	lzss::ENTRY_LZSS,
 	cps::ENTRY_CPS,
-	lzss_dc::ENTRY_LZSS_DC
+	lzss_be::ENTRY_LZSS_BE
 ].into());
