@@ -1,20 +1,3 @@
-macro_rules! impl_byte_readers {
-	($($t:ty),*) => {paste::paste! {$(
-		fn [<read_ $t>](&self, offset: usize) -> Result<$t, String> {
-			Ok($t::from_le_bytes(self.get(offset..offset + size_of::<$t>()).ok_or_else(#[cold] || format!("error reading field"))?.try_into().unwrap()))
-		}
-		fn [<read_ $t _be>](&self, offset: usize) -> Result<$t, String> {
-			Ok($t::from_be_bytes(self.get(offset..offset + size_of::<$t>()).ok_or_else(#[cold] || format!("error reading field"))?.try_into().unwrap()))
-		}
-		fn [<get_ $t _at>](&self, offset: usize) -> Option<$t> {
-			Some($t::from_le_bytes(self.get(offset..offset + size_of::<$t>())?.try_into().unwrap()))
-		}
-		fn [<get_ $t _at_be>](&self, offset: usize) -> Option<$t> {
-			Some($t::from_be_bytes(self.get(offset..offset + size_of::<$t>())?.try_into().unwrap()))
-		}
-	)*}}
-}
-
 pub trait ByteSlice {
 	fn starts_with_at(&self, needle: &[u8], offset: usize) -> bool;
 	fn read_bytes(&self, offset: usize, len: usize, name: &str) -> Result<&[u8], String>;
@@ -61,6 +44,23 @@ pub trait ByteSlice {
 	fn unswizzled_psp(&self, width: u32, height: u32) -> Vec<u8>;
 }
 
+macro_rules! impl_for_types {
+	($($t:ty),*) => {paste::paste! {$(
+		fn [<read_ $t>](&self, offset: usize) -> Result<$t, String> {
+			Ok($t::from_le_bytes(self.get(offset..offset + size_of::<$t>()).ok_or_else(#[cold] || format!("error reading field"))?.try_into().unwrap()))
+		}
+		fn [<read_ $t _be>](&self, offset: usize) -> Result<$t, String> {
+			Ok($t::from_be_bytes(self.get(offset..offset + size_of::<$t>()).ok_or_else(#[cold] || format!("error reading field"))?.try_into().unwrap()))
+		}
+		fn [<get_ $t _at>](&self, offset: usize) -> Option<$t> {
+			Some($t::from_le_bytes(self.get(offset..offset + size_of::<$t>())?.try_into().unwrap()))
+		}
+		fn [<get_ $t _at_be>](&self, offset: usize) -> Option<$t> {
+			Some($t::from_be_bytes(self.get(offset..offset + size_of::<$t>())?.try_into().unwrap()))
+		}
+	)*}}
+}
+
 impl ByteSlice for [u8] {
 	fn starts_with_at(&self, needle: &[u8], offset: usize) -> bool {
 		self.get(offset..offset + needle.len()).map_or(false, |x| x.starts_with(needle))
@@ -70,7 +70,7 @@ impl ByteSlice for [u8] {
 		Ok(self.get(offset..offset + len).ok_or_else(#[cold] || format!("error reading {name}"))?.try_into().unwrap())
 	}
 
-	impl_byte_readers!(u8, u16, u32, u64, usize, i8, i16, i32, i64, isize);
+	impl_for_types!(u8, u16, u32, u64, usize, i8, i16, i32, i64, isize);
 
 	fn unswizzled_psp(&self, width_bytes: u32, height: u32) -> Vec<u8> {
 		let mut pixels = Vec::with_capacity(self.len());

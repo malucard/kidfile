@@ -3,6 +3,7 @@ use image::Image;
 
 pub mod file_data;
 pub mod byte_slice;
+pub mod byte_iter;
 pub mod image;
 mod data_formats;
 pub use data_formats::DATA_DECODERS;

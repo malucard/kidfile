@@ -11,6 +11,10 @@ pub enum PixelFormat {
 	Bgr,
 	Rgba16,
 	Rgb16,
+	Rgba4444,
+	Bgra16,
+	Bgr16,
+	Bgra4444,
 	RgbaClut8,
 	RgbxClut8,
 	RgbClut8,
@@ -36,6 +40,10 @@ impl PixelFormat {
 			PixelFormat::Bgr => 24,
 			PixelFormat::Rgba16 => 16,
 			PixelFormat::Rgb16 => 16,
+			PixelFormat::Rgba4444 => 16,
+			PixelFormat::Bgra16 => 16,
+			PixelFormat::Bgr16 => 16,
+			PixelFormat::Bgra4444 => 16,
 			PixelFormat::RgbaClut8 => 8,
 			PixelFormat::RgbxClut8 => 8,
 			PixelFormat::RgbClut8 => 8,
@@ -75,6 +83,10 @@ impl Display for PixelFormat {
 			Self::Bgr => write!(f, "BGR"),
 			Self::Rgba16 => write!(f, "RGBA5551"),
 			Self::Rgb16 => write!(f, "RGB565"),
+			Self::Rgba4444 => write!(f, "RGBA4444"),
+			Self::Bgra16 => write!(f, "BGRA5551"),
+			Self::Bgr16 => write!(f, "BGR565"),
+			Self::Bgra4444 => write!(f, "BGRA4444"),
 			Self::RgbaClut8 => write!(f, "RGBA clut8"),
 			Self::RgbxClut8 => write!(f, "RGBX clut8"),
 			Self::RgbClut8 => write!(f, "RGB clut8"),
@@ -107,9 +119,14 @@ pub struct Frame {
 	pub pixels: Box<[Pixel]>
 }
 
+fn bits_4_to_8(x: u8) -> u8 {
+	x << 4 | (x & 0xF)
+}
+
 fn bits_5_to_8(x: u8) -> u8 {
 	x << 3 | (x & 1) << 2 | (x & 1) << 1 | (x & 1)
 }
+
 fn bits_6_to_8(x: u8) -> u8 {
 	x << 2 | (x & 1) << 1 | (x & 1)
 }
@@ -147,6 +164,51 @@ impl Frame {
 		}
 	}
 
+	pub fn from_bgra16(width: u32, height: u32, buf: &[u8]) -> Self {
+		let needed_size = width * height * 2;
+		assert!(buf.len() as u32 >= needed_size);
+		let buf = &buf[0..needed_size as usize];
+		Self {
+			width, height, og_fmt: PixelFormat::Bgra16,
+			pixels: buf.chunks_exact(2).map(|x| Pixel {
+				r: bits_5_to_8(x[1] >> 3),
+				g: bits_5_to_8(x[0] >> 5 | x[1] << 3),
+				b: bits_5_to_8(x[0]),
+				a: if x[1] & 0x80 != 0 {0xFF} else {0}
+			}).collect()
+		}
+	}
+
+	pub fn from_rgba4444(width: u32, height: u32, buf: &[u8]) -> Self {
+		let needed_size = width * height * 2;
+		assert!(buf.len() as u32 >= needed_size);
+		let buf = &buf[0..needed_size as usize];
+		Self {
+			width, height, og_fmt: PixelFormat::Rgba4444,
+			pixels: buf.chunks_exact(2).map(|x| Pixel {
+				r: bits_4_to_8(x[0]),
+				g: bits_4_to_8(x[0] >> 4),
+				b: bits_4_to_8(x[1]),
+				a: bits_4_to_8(x[1] >> 4)
+			}).collect()
+		}
+	}
+
+	pub fn from_bgra4444(width: u32, height: u32, buf: &[u8]) -> Self {
+		let needed_size = width * height * 2;
+		assert!(buf.len() as u32 >= needed_size);
+		let buf = &buf[0..needed_size as usize];
+		Self {
+			width, height, og_fmt: PixelFormat::Bgra4444,
+			pixels: buf.chunks_exact(2).map(|x| Pixel {
+				r: bits_4_to_8(x[1]),
+				g: bits_4_to_8(x[0] >> 4),
+				b: bits_4_to_8(x[0]),
+				a: bits_4_to_8(x[1] >> 4)
+			}).collect()
+		}
+	}
+
 	pub fn from_rgb16(width: u32, height: u32, buf: &[u8]) -> Self {
 		let needed_size = width * height * 2;
 		assert!(buf.len() as u32 >= needed_size);
@@ -157,6 +219,21 @@ impl Frame {
 				r: bits_5_to_8(x[0]),
 				g: bits_6_to_8(x[0] >> 5 | x[1] << 3),
 				b: bits_5_to_8(x[1] >> 3),
+				a: 0xFF
+			}).collect()
+		}
+	}
+
+	pub fn from_bgr16(width: u32, height: u32, buf: &[u8]) -> Self {
+		let needed_size = width * height * 2;
+		assert!(buf.len() as u32 >= needed_size);
+		let buf = &buf[0..needed_size as usize];
+		Self {
+			width, height, og_fmt: PixelFormat::Bgr16,
+			pixels: buf.chunks_exact(2).map(|x| Pixel {
+				r: bits_5_to_8(x[1] >> 3),
+				g: bits_6_to_8(x[0] >> 5 | x[1] << 3),
+				b: bits_5_to_8(x[0]),
 				a: 0xFF
 			}).collect()
 		}

@@ -292,7 +292,7 @@ impl<'a> TabViewer for ExplorerTabViewer<'a> {
 			}
 		}
 		let mut new_selection = None;
-		if ui.input_mut(|inp| inp.consume_key(Modifiers::CTRL | Modifiers::SHIFT, Key::Tab)) {
+		if ui.input_mut(|inp| inp.consume_key(Modifiers::NONE, Key::PageUp)) {
 			if let Some((selected_idx, ..)) = tab.selection {
 				if selected_idx == 0 {
 					new_selection = Some(tab.children.len() - 1);
@@ -302,7 +302,7 @@ impl<'a> TabViewer for ExplorerTabViewer<'a> {
 			} else if tab.children.len() != 0 {
 				new_selection = Some(tab.children.len() - 1);
 			}
-		} else if ui.input_mut(|inp| inp.consume_key(Modifiers::CTRL, Key::Tab)) {
+		} else if ui.input_mut(|inp| inp.consume_key(Modifiers::NONE, Key::PageDown)) {
 			if let Some((selected_idx, ..)) = tab.selection {
 				if selected_idx >= tab.children.len() - 1 {
 					new_selection = Some(0);
