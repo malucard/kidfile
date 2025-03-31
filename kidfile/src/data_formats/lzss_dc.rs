@@ -61,11 +61,7 @@ fn decompress_lzss_dc(inp: &[u8], expected_size: usize) -> Result<Box<[u8]>, Opt
 						return Err(None);
 					}
 					for i in start..start + ref_len {
-						if i < chunk_out_start {
-							out.push(0xFF);
-						} else {
-							out.push(*out.get(i).ok_or(None)?);
-						}
+						out.push(*out.get(i.max(chunk_out_start)).ok_or(None)?);
 					}
 				}
 			}
