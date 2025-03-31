@@ -15,7 +15,8 @@ Currently supports images in most of the PS2 games and their late PSP and PC por
   - TIM2
   - BIP (all)
   - GIM (PSP)
-  - KLZ (PC)
+  - KLZ
+  - PVR (Dreamcast)
   - common formats (PNG, BMP, etc)
 - Archive formats:
   - AFS
@@ -23,4 +24,5 @@ Currently supports images in most of the PS2 games and their late PSP and PC por
   - Concatenated OGDT/TIM2 images
 - Compression formats:
   - LZSS
+  - Big-endian LZSS-like used in N7 DC and 12R PS2
   - CPS (PS2)
