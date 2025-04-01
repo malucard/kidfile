@@ -5,7 +5,7 @@ use crate::{byte_iter::ByteIter, file_data::FileData, Certainty, Decoder};
 pub const ENTRY_LZSS_BE: Decoder<Box<[u8]>> = Decoder {
 	id: "lzss-be",
 	desc: "LZSS-like used in N7 DC and 12R PS2",
-	detect: |buf| Certainty::certain_if(decode_header(buf).is_some()),
+	detect: |buf| Certainty::possible_if(decode_header(buf).is_some()),
 	decode
 };
 
