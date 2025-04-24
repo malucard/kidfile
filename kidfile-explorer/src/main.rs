@@ -649,7 +649,7 @@ fn main() {
 		"Kidfile",
 		eframe::NativeOptions {
 			viewport: ViewportBuilder::default()
-				.with_title("Kidfile Explorer")
+				.with_title(format!("Kidfile Explorer v{}", env!("CARGO_PKG_VERSION")))
 				.with_inner_size(vec2(1024.0, 640.0)),
 			..Default::default()
 		},
