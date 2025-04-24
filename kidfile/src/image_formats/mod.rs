@@ -8,6 +8,7 @@ mod gim;
 mod klz;
 mod bip;
 mod pvr;
+mod tim;
 mod common_image;
 
 pub const IMAGE_DECODERS: LazyLock<Vec<Decoder<Image>>> = LazyLock::new(|| [
@@ -17,6 +18,7 @@ pub const IMAGE_DECODERS: LazyLock<Vec<Decoder<Image>>> = LazyLock::new(|| [
 	klz::ENTRY_KLZ,
 	bip::ENTRY_BIP,
 	pvr::ENTRY_PVR,
+	tim::ENTRY_TIM,
 	common_image::ENTRY_PNG,
 	common_image::ENTRY_JPEG,
 	common_image::ENTRY_BMP,

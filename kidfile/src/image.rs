@@ -26,7 +26,10 @@ pub enum PixelFormat {
 	RgbClut4,
 	BgraClut4,
 	BgrxClut4,
-	BgrClut4
+	BgrClut4,
+	PsxClut4,
+	PsxClut8,
+	Psx
 }
 
 impl PixelFormat {
@@ -55,7 +58,10 @@ impl PixelFormat {
 			PixelFormat::RgbClut4 => 4,
 			PixelFormat::BgraClut4 => 4,
 			PixelFormat::BgrxClut4 => 4,
-			PixelFormat::BgrClut4 => 4
+			PixelFormat::BgrClut4 => 4,
+			PixelFormat::PsxClut4 => 4,
+			PixelFormat::PsxClut8 => 8,
+			PixelFormat::Psx => 16
 		}
 	}
 }
@@ -98,7 +104,10 @@ impl Display for PixelFormat {
 			Self::RgbClut4 => write!(f, "RGB clut4"),
 			Self::BgraClut4 => write!(f, "BGRA clut4"),
 			Self::BgrxClut4 => write!(f, "BGRX clut4"),
-			Self::BgrClut4 => write!(f, "BGR clut4")
+			Self::BgrClut4 => write!(f, "BGR clut4"),
+			PixelFormat::PsxClut4 => write!(f, "PSX clut4"),
+			PixelFormat::PsxClut8 => write!(f, "PSX clut8"),
+			PixelFormat::Psx => write!(f, "PSX 16-bit")
 		}
 	}
 }

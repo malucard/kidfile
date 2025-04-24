@@ -18,7 +18,8 @@ fn decode_header(data: &mut FileData) -> Option<usize> {
 
 fn decode(data: &mut FileData) -> Result<Box<[u8]>, String> {
 	if let Some(expected_size) = decode_header(data) {
-		match decompress_lzss(&data.read()[4..], expected_size) {
+		let is_size_unknown = expected_size == data.len();
+		match decompress_lzss(&data.read()[4..], expected_size, is_size_unknown) {
 			Ok(decompressed) => Ok(decompressed),
 			Err(Some(actual_size)) => Err(format!("expected {expected_size} bytes when decompressing, got only {actual_size}")),
 			Err(None) => Err(format!("expected {expected_size} bytes when decompressing, got more"))
@@ -28,7 +29,7 @@ fn decode(data: &mut FileData) -> Result<Box<[u8]>, String> {
 	}
 }
 
-fn decompress_lzss(inp: &[u8], expected_size: usize) -> Result<Box<[u8]>, Option<usize>> {
+fn decompress_lzss(inp: &[u8], expected_size: usize, growable: bool) -> Result<Box<[u8]>, Option<usize>> {
 	let mut out = Vec::with_capacity(expected_size);
 	let mut src = inp.iter();
 	let mut flags = 0;
@@ -48,7 +49,7 @@ fn decompress_lzss(inp: &[u8], expected_size: usize) -> Result<Box<[u8]>, Option
 		}
 		if flags & 1 != 0 {
 			if let Some(c) = src.next().cloned() {
-				if out.len() >= expected_size {
+				if !growable && out.len() >= expected_size {
 					return Err(None);
 				}
 				out.push(c);
@@ -60,7 +61,7 @@ fn decompress_lzss(inp: &[u8], expected_size: usize) -> Result<Box<[u8]>, Option
 			let j = (j as usize & 0x0F) + THRESHOLD;
 			for k in 0..=j {
 				let c = text_buf[(i + k) & (N - 1)];
-				if out.len() >= expected_size {
+				if !growable && out.len() >= expected_size {
 					return Err(None);
 				}
 				out.push(c);
@@ -71,7 +72,7 @@ fn decompress_lzss(inp: &[u8], expected_size: usize) -> Result<Box<[u8]>, Option
 			break;
 		}
 	}
-	if out.len() == expected_size {
+	if growable || out.len() == expected_size {
 		Ok(out.into_boxed_slice())
 	} else {
 		Err(Some(out.len()))
