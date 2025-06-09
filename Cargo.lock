@@ -1985,7 +1985,7 @@ checksum = "e2db585e1d738fc771bf08a151420d3ed193d9d895a36df7f6f8a9456b911ddc"
 
 [[package]]
 name = "kidfile"
-version = "0.3.1"
+version = "0.4.0"
 dependencies = [
  "bytemuck",
  "image",
@@ -1997,7 +1997,7 @@ dependencies = [
 
 [[package]]
 name = "kidfile-explorer"
-version = "0.3.1"
+version = "0.4.0"
 dependencies = [
  "chrono",
  "directories",
