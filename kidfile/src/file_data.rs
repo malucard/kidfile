@@ -180,6 +180,13 @@ impl FileData {
 		}
 	}
 
+	pub fn physical_path(&self) -> Option<PathBuf> {
+		match self {
+			Self::Stream {path, ..} => Some(path.clone()),
+			_ => None
+		}
+	}
+
 	impl_byte_readers!(u8, u16, u32, u64, usize, i8, i16, i32, i64, isize);
 }
 

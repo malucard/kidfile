@@ -5,6 +5,7 @@ use super::Decoder;
 mod afs;
 mod lnk;
 mod concat2k;
+mod infdatabin;
 
 pub struct ArchiveEntry {
 	pub data: FileData,
@@ -20,5 +21,6 @@ pub struct Archive {
 pub const ARCHIVE_DECODERS: LazyLock<Vec<Decoder<Archive>>> = LazyLock::new(|| [
 	afs::ENTRY_AFS,
 	lnk::ENTRY_LNK,
-	concat2k::ENTRY_CONCAT2K
+	concat2k::ENTRY_CONCAT2K,
+	infdatabin::ENTRY_SLPS02669_DATABIN
 ].into());

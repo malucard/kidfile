@@ -1,10 +1,10 @@
 #![windows_subsystem = "windows"]
 
-use std::{borrow::Cow, cmp::Ordering, collections::HashMap, ffi::OsString, fs::File, io::{BufReader, Write}, path::{Path, PathBuf}, sync::{atomic::{self, AtomicBool, AtomicUsize}, LazyLock, RwLock}, time::{Duration, Instant}};
+use std::{borrow::Cow, cmp::Ordering, collections::{HashMap, HashSet}, ffi::OsString, fs::File, io::{BufReader, Write}, path::{Path, PathBuf}, sync::{atomic::{self, AtomicBool, AtomicUsize}, LazyLock, RwLock}, time::{Duration, Instant}};
 use batch_decode::BatchDecode;
 use complex_path::ComplexPath;
 use data_view::DataView;
-use egui::{epaint::text::{FontInsert, FontPriority, InsertFontFamily}, popup, vec2, Align, Button, CentralPanel, Context, FontData, FontFamily, Grid, Key, Label, Layout, Modifiers, PopupCloseBehavior, Pos2, Rect, ScrollArea, Separator, TextStyle, TextWrapMode, TextureOptions, TopBottomPanel, Ui, UiBuilder, Vec2, ViewportBuilder, Visuals};
+use egui::{epaint::text::{FontInsert, FontPriority, InsertFontFamily}, popup, vec2, Align, Button, CentralPanel, Context, FontData, FontFamily, Grid, Key, Label, Layout, Modifiers, PopupCloseBehavior, Pos2, Rect, ScrollArea, Separator, TextBuffer, TextStyle, TextWrapMode, TextureOptions, TopBottomPanel, Ui, UiBuilder, Vec2, ViewportBuilder, Visuals};
 use egui_dock::{DockArea, DockState, NodeIndex, SurfaceIndex, TabAddAlign, TabViewer};
 use kidfile::{auto_decode_full, DynData};
 use rfd::FileDialog;
@@ -122,7 +122,8 @@ static UNIQUE_ID: AtomicUsize = AtomicUsize::new(0);
 
 struct ExplorerEntry {
 	pub name: OsString,
-	pub is_dir: bool
+	pub is_dir: bool,
+	pub is_archive_dir: bool
 }
 
 struct ExplorerTab {
@@ -134,7 +135,8 @@ struct ExplorerTab {
 	pub selection_size: Option<usize>,
 	pub past: Vec<ComplexPath>,
 	pub future: Vec<ComplexPath>,
-	pub batch_task: Option<BatchDecode>
+	pub batch_task: Option<BatchDecode>,
+	pub archive_prefix_filter: Option<OsString>
 }
 
 impl ExplorerTab {
@@ -148,7 +150,8 @@ impl ExplorerTab {
 			view: DataView::None,
 			past: Vec::new(),
 			future: Vec::new(),
-			batch_task: None
+			batch_task: None,
+			archive_prefix_filter: None
 		};
 		tab.refresh(ctx);
 		tab
@@ -157,8 +160,33 @@ impl ExplorerTab {
 	pub fn refresh(&mut self, ctx: &Context) {
 		let selected_name = self.selection.as_ref().map(|s| self.children[s.0].name.clone());
 		self.children.clear();
+		let mut archive_dirs_added = HashSet::new();
 		self.path.iterate(|name, is_dir| {
-			self.children.push(ExplorerEntry {name, is_dir});
+			if !self.path.is_physical() {
+				if let Some(name_str) = name.to_str() {
+					let mut prefix = String::new();
+					let name_str = if let Some(filter) = &self.archive_prefix_filter {
+						prefix = filter.to_string_lossy().to_string();
+						if !name_str.starts_with(&prefix) {
+							return;
+						}
+						&name_str[filter.len()..]
+					} else {
+						name_str
+					};
+					if let Some(divider) = name_str.find('/').or_else(|| name_str.find('\\')) {
+						let dir_name = name_str[0..divider + 1].to_string();
+						let dir_name_os = OsString::from(dir_name.clone());
+						if archive_dirs_added.insert(dir_name) {
+							let mut full_name = OsString::from(prefix);
+							full_name.push(dir_name_os);
+							self.children.push(ExplorerEntry {name: full_name, is_dir: true, is_archive_dir: true});
+						}
+						return;
+					}
+				}
+			}
+			self.children.push(ExplorerEntry {name, is_dir, is_archive_dir: false});
 		});
 		self.children.sort_by(|x, y|
 			if x.is_dir != y.is_dir {
@@ -578,15 +606,29 @@ impl<'a> TabViewer for ExplorerTabViewer<'a> {
 		});
 		if let Some(idx) = new_selection {
 			if tab.children[idx].is_dir {
-				let new_path = tab.path.join_dir(&tab.children[idx].name);
-				if new_path.can_iterate() {
-					tab.selection = None;
-					tab.past.push(std::mem::replace(&mut tab.path, new_path));
-					tab.future.clear();
-					tab.refresh(ui.ctx());
-					log!("entered '{}'", tab.path.file_name().map_or_else(|| tab.path.to_str().into_owned(), |x| x.to_string_lossy().into_owned()));
+				if tab.children[idx].is_archive_dir {
+					if let Some(x) = &mut tab.archive_prefix_filter {
+						x.push(&tab.children[idx].name);
+					} else {
+						tab.archive_prefix_filter = Some(tab.children[idx].name.clone());
+					}
+					log!(
+						"entered '{}{}'",
+						tab.path.file_name().map_or_else(|| tab.path.to_str().into_owned(), |x| x.to_string_lossy().into_owned()),
+						tab.archive_prefix_filter.as_ref().unwrap().to_string_lossy()
+					);
 				} else {
-					log!("cannot read directory '{}'", tab.children[idx].name.to_string_lossy());
+					let new_path = tab.path.join_dir(&tab.children[idx].name);
+					if new_path.can_iterate() {
+						tab.archive_prefix_filter = None;
+						tab.selection = None;
+						tab.past.push(std::mem::replace(&mut tab.path, new_path));
+						tab.future.clear();
+						tab.refresh(ui.ctx());
+						log!("entered '{}'", tab.path.file_name().map_or_else(|| tab.path.to_str().into_owned(), |x| x.to_string_lossy().into_owned()));
+					} else {
+						log!("cannot read directory '{}'", tab.children[idx].name.to_string_lossy());
+					}
 				}
 			} else {
 				tab.select(ui.ctx(), idx);

@@ -2,6 +2,7 @@ use std::sync::LazyLock;
 use crate::image::Image;
 use super::Decoder;
 
+mod prt;
 mod tim2;
 mod ogdt;
 mod gim;
@@ -12,6 +13,7 @@ mod tim;
 mod common_image;
 
 pub const IMAGE_DECODERS: LazyLock<Vec<Decoder<Image>>> = LazyLock::new(|| [
+	prt::ENTRY_PRT,
 	tim2::ENTRY_TIM2,
 	ogdt::ENTRY_OGDT,
 	gim::ENTRY_GIM,
