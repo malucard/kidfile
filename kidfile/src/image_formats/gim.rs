@@ -69,7 +69,7 @@ pub const ENTRY_GIM: Decoder<Image> = Decoder {
 				};
 				let frame = match format {
 					0 => Frame::from_rgb16(aligned_width, height, &pixel_data),
-					1 => Frame::from_rgba16(aligned_width, height, &pixel_data),
+					1 => Frame::from_rgba5551(aligned_width, height, &pixel_data),
 					3 => Frame::from_rgba(aligned_width, height, &pixel_data),
 					4 => Frame::from_rgba_clut4(aligned_width, height, cur_palette, &pixel_data),
 					5 => Frame::from_rgba_clut8(aligned_width, height, cur_palette, &pixel_data),

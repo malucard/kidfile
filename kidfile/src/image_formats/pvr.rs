@@ -1,4 +1,6 @@
-use crate::{byte_slice::ByteSlice, image::{Frame, Image}, Certainty, Decoder};
+use std::{fs::File, io::{Read, Seek, SeekFrom}};
+
+use crate::{Certainty, Decoder, byte_slice::ByteSlice, image::{Frame, Image, PixelFormat, bit_twiddle}};
 
 // https://www.fabiensanglard.net/Mykaruga/tools/segaPVRFormat.txt
 // https://dreamcast.wiki/Twiddling
@@ -31,36 +33,76 @@ pub const ENTRY_PVR: Decoder<Image> = Decoder {
 		let width = buf.read_u16(12)? as usize;
 		let height = buf.read_u16(14)? as usize;
 		let mut frame = match pixel_fmt {
-			0 => Frame::from_bgra16(width as u32, height as u32, buf.get(16..16 + width * height * 2).ok_or("not enough pixel data for BGRA5551")?),
-			1 => Frame::from_bgr16(width as u32, height as u32, buf.get(16..16 + width * height * 2).ok_or("not enough pixel data for BGR565")?),
-			2 => Frame::from_bgra4444(width as u32, height as u32, buf.get(16..16 + width * height * 2).ok_or("not enough pixel data for BGRA4444")?),
+			0 | 1 | 2 => {
+				if twiddle_type == 3 { // vq compression
+					let codebook = buf.get(16..16 + 2048).ok_or("not enough 16-bit VQ codebook data")?;
+					let indices = buf.get(16 + 2048..16 + 2048 + width * height / 4).ok_or("not enough VQ index data")?;
+					let mut pixels = vec![0u8; width * height * 2];
+					for block_y in 0..height / 2 {
+						let twiddled_block_y = bit_twiddle(block_y);
+						for block_x in 0..width / 2 {
+							let twiddled_block_idx = twiddled_block_y | bit_twiddle(block_x) << 1;
+							let codebook_pos = indices[twiddled_block_idx] as usize * 8;
+							let x = block_x * 2;
+							let y = block_y * 2;
+							pixels[(y * width + x) * 2] = codebook[codebook_pos];
+							pixels[(y * width + x) * 2 + 1] = codebook[codebook_pos + 1];
+							pixels[(y * width + x + 1) * 2] = codebook[codebook_pos + 4];
+							pixels[(y * width + x + 1) * 2 + 1] = codebook[codebook_pos + 5];
+							pixels[((y + 1) * width + x) * 2] = codebook[codebook_pos + 2];
+							pixels[((y + 1) * width + x) * 2 + 1] = codebook[codebook_pos + 3];
+							pixels[((y + 1) * width + x + 1) * 2] = codebook[codebook_pos + 6];
+							pixels[((y + 1) * width + x + 1) * 2 + 1] = codebook[codebook_pos + 7];
+						}
+					}
+					if pixel_fmt == 0 {
+						Frame::from_bgra5551(width as u32, height as u32, &pixels).with_og_fmt(PixelFormat::Bgra5551Vq8)
+					} else if pixel_fmt == 1 {
+						Frame::from_bgr565(width as u32, height as u32, &pixels).with_og_fmt(PixelFormat::Bgr565Vq8)
+					} else {
+						Frame::from_bgra4444(width as u32, height as u32, &pixels).with_og_fmt(PixelFormat::Bgra4444Vq8)
+					}
+				} else {
+					if pixel_fmt == 0 {
+						Frame::from_bgra5551(width as u32, height as u32, buf.get(16..16 + width * height * 2).ok_or("not enough pixel data for BGRA5551")?)
+					} else if pixel_fmt == 1 {
+						Frame::from_bgr565(width as u32, height as u32, buf.get(16..16 + width * height * 2).ok_or("not enough pixel data for BGR565")?)
+					} else {
+						Frame::from_bgra4444(width as u32, height as u32, buf.get(16..16 + width * height * 2).ok_or("not enough pixel data for BGRA4444")?)
+					}
+				}
+			}
 			5 => {
-				if palette_bytes.is_empty() {
+				if twiddle_type == 7 {
+					return Err("file needs external palette, unimplemented".into());
+				} else if palette_bytes.is_empty() {
 					Frame::from_bgra_clut4(
 						width as u32, height as u32,
 						buf.get(16..16 + 1024).ok_or("not enough palette data for BGRA clut4")?,
-						buf.get(16 + 1024..16 + 1024 + width * height / 2).ok_or("not enough pixel data for BGRA clut4")?
+						buf.get(16 + 1024..16 + 1024 + width * height / 2).ok_or("not enough index data for BGRA clut4")?
 					)
 				} else {
 					Frame::from_bgra_clut4(
 						width as u32, height as u32,
 						&palette_bytes,
-						buf.get(16..16 + width * height / 2).ok_or("not enough pixel data for BGRA clut4")?
+						buf.get(16..16 + width * height / 2).ok_or("not enough data for BGRA clut4")?
 					)
 				}
 			}
 			6 => {
-				if palette_bytes.is_empty() {
+				if twiddle_type == 7 {
+					return Err("file needs external palette, unimplemented".into());
+				} else if palette_bytes.is_empty() {
 					Frame::from_bgra_clut8(
 						width as u32, height as u32,
 						buf.get(16..16 + 1024).ok_or("not enough palette data for BGRA clut8")?,
-						buf.get(16 + 1024..16 + 1024 + width * height).ok_or("not enough pixel data for BGRA clut8")?
+						buf.get(16 + 1024..16 + 1024 + width * height).ok_or("not enough index data for BGRA clut8")?
 					)
 				} else {
 					Frame::from_bgra_clut8(
 						width as u32, height as u32,
 						&palette_bytes,
-						buf.get(16..16 + width * height).ok_or("not enough pixel data for BGRA clut8")?
+						buf.get(16..16 + width * height).ok_or("not enough data for BGRA clut8")?
 					)
 				}
 			}

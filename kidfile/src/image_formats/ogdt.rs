@@ -23,7 +23,7 @@ pub const ENTRY_OGDT: Decoder<Image> = Decoder {
 			),
 			Some(1) => if buf.len() < 32 + frame_count * tile_width * tile_height * 3 {
 				(
-					PixelFormat::Rgba16,
+					PixelFormat::Rgba5551,
 					tile_width * tile_height * 2,
 					Cow::Borrowed(&[] as &[u8])
 				)
@@ -56,7 +56,7 @@ pub const ENTRY_OGDT: Decoder<Image> = Decoder {
 			let tile = match fmt {
 				PixelFormat::Rgba => Frame::from_rgba(tile_width as u32, tile_height as u32, frame_bytes).with_double_alpha(),
 				PixelFormat::Rgb => Frame::from_rgb(tile_width as u32, tile_height as u32, frame_bytes),
-				PixelFormat::Rgba16 => Frame::from_rgba16(tile_width as u32, tile_height as u32, frame_bytes),
+				PixelFormat::Rgba5551 => Frame::from_rgba5551(tile_width as u32, tile_height as u32, frame_bytes),
 				PixelFormat::RgbaClut8 => Frame::from_rgba_clut8(tile_width as u32, tile_height as u32, &clut, frame_bytes).with_double_alpha(),
 				PixelFormat::RgbaClut4 => Frame::from_rgba_clut4(tile_width as u32, tile_height as u32, &clut, frame_bytes).with_double_alpha(),
 				_ => unreachable!()

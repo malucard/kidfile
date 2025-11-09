@@ -17,7 +17,7 @@ pub const ENTRY_TIM2: Decoder<Image> = Decoder {
 					tim2::Format::Indexed8 => PixelFormat::RgbaClut8,
 					tim2::Format::Rgb888 => PixelFormat::Rgb,
 					tim2::Format::Rgba8888 => PixelFormat::Rgba,
-					tim2::Format::Abgr1555 => PixelFormat::Rgba16
+					tim2::Format::Abgr1555 => PixelFormat::Rgba5551
 				};
 				if matches!(frame.og_fmt, PixelFormat::RgbaClut4 | PixelFormat::RgbaClut8 | PixelFormat::Rgba) {
 					Some(frame.with_double_alpha())
