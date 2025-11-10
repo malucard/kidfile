@@ -22,13 +22,15 @@ pub const ENTRY_AFS: Decoder<Archive> = Decoder {
 		end = end.next_multiple_of(0x800);
 		let info_present = file.len() > end;
 		for i in 0..count {
-			let mut name = format!("{}.BIN", i);
-			let mut timestamp = None;
+			let name;
+			let timestamp;
 			if info_present {
 				let pos = end as usize + i * 48;
 				let mut name_buf = [0u8; 32];
 				file.read_chunk_exact(&mut name_buf, pos).map_err(|_| "could not read entry name")?;
 				let len = name_buf.iter().position(|x| *x == 0).unwrap_or(32);
+				name = String::from_utf8(name_buf[0..len].to_vec()).map_err(|_| "entry name is not valid UTF-8")?;
+
 				let year = file.read_u16(pos + 32)?;
 				let month = file.read_u16(pos + 34)?;
 				let day = file.read_u16(pos + 36)?;
@@ -36,11 +38,13 @@ pub const ENTRY_AFS: Decoder<Archive> = Decoder {
 				let minute = file.read_u16(pos + 40)?;
 				let second = file.read_u16(pos + 42)?;
 				timestamp = Some((year, month, day, hour, minute, second));
-				name = String::from_utf8(name_buf[0..len].to_vec()).map_err(|_| "entry name is not valid UTF-8")?;
+			} else {
+				name = format!("{}", i);
+				timestamp = None;
 			}
 			entries.push(ArchiveEntry {
-				name: name.clone(),
 				data: file.subfile(entry_ranges[i].0, entry_ranges[i].1).unwrap(),
+				name,
 				timestamp
 			});
 		}
