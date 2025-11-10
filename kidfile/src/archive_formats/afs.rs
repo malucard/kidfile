@@ -20,18 +20,28 @@ pub const ENTRY_AFS: Decoder<Archive> = Decoder {
 			entry_ranges.push((offset, len));
 		}
 		end = end.next_multiple_of(0x800);
+		let info_present = file.len() > end;
 		for i in 0..count {
-			let pos = end as usize + i * 48;
-			let mut name_buf = [0u8; 32];
-			file.read_chunk_exact(&mut name_buf, pos).map_err(|_| "could not read entry name")?;
-			let len = name_buf.iter().position(|x| *x == 0).unwrap_or(32);
-			let year = file.read_u16(pos + 32)?;
-			let month = file.read_u16(pos + 34)?;
-			let day = file.read_u16(pos + 36)?;
-			let hour = file.read_u16(pos + 38)?;
-			let minute = file.read_u16(pos + 40)?;
-			let second = file.read_u16(pos + 42)?;
-			let name = String::from_utf8(name_buf[0..len].to_vec()).map_err(|_| "entry name is not valid UTF-8")?;
+			let mut name = format!("{}.BIN", i);
+			let mut year = 2000;
+			let mut month = 1;
+			let mut day = 1;
+			let mut hour = 0;
+			let mut minute = 0;
+			let mut second = 0;
+			if info_present {
+				let pos = end as usize + i * 48;
+				let mut name_buf = [0u8; 32];
+				file.read_chunk_exact(&mut name_buf, pos).map_err(|_| "could not read entry name")?;
+				let len = name_buf.iter().position(|x| *x == 0).unwrap_or(32);
+				year = file.read_u16(pos + 32)?;
+				month = file.read_u16(pos + 34)?;
+				day = file.read_u16(pos + 36)?;
+				hour = file.read_u16(pos + 38)?;
+				minute = file.read_u16(pos + 40)?;
+				second = file.read_u16(pos + 42)?;
+				name = String::from_utf8(name_buf[0..len].to_vec()).map_err(|_| "entry name is not valid UTF-8")?;
+			}
 			entries.push(ArchiveEntry {
 				name: name.clone(),
 				data: file.subfile(entry_ranges[i].0, entry_ranges[i].1).unwrap(),
