@@ -18,6 +18,7 @@ Currently supports images in most of the PS2 games and their late PSP and PC por
   - GIM (PSP)
   - KLZ
   - PVR (Dreamcast)
+  - PRT/CPS (PC)
   - common formats (PNG, BMP, etc)
 - Archive formats:
   - AFS
