@@ -38,7 +38,7 @@ pub const ENTRY_PRT: Decoder<Image> = Decoder {
 			for y in (0..img_h).rev() {
 				let row_pos = pixel_pos + (stride * y) as usize;
 				let row = Frame::from_bgrx_clut8(img_w, 1, &buf[palette_pos..], &buf[row_pos..]);
-				frame.paste(0, img_h - y, &row);
+				frame.paste(0, img_h - y - 1, &row);
 			}
 			Ok(Image {frames: Box::new([frame])})
 		} else if bpp == 24 {
